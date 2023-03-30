@@ -1,14 +1,15 @@
-package com.example.myapplicationwithauthorization
+package com.example.myapplicationwithauthorization.ui
 
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import com.example.myapplicationwithauthorization.MyApplication
+import com.example.myapplicationwithauthorization.R
 import com.example.myapplicationwithauthorization.databinding.FragmentMainBinding
-import com.example.myapplicationwithauthorization.viewmodel.MainViewModel
-import com.example.myapplicationwithauthorization.viewmodel.QuestionData
+import com.example.myapplicationwithauthorization.network.usecase.MainViewModel
+import com.example.myapplicationwithauthorization.network.usecase.model.TriviaQuestion
 import com.google.android.material.snackbar.Snackbar
 
 class MainFragment : Fragment() {
@@ -21,7 +22,10 @@ class MainFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         binding = FragmentMainBinding.inflate(inflater, container, false)
-        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
+
+        viewModel = (requireActivity().application as MyApplication).
+        mainViewModelFactory.create(MainViewModel::class.java)
+
         return binding.root
     }
 
@@ -43,20 +47,19 @@ class MainFragment : Fragment() {
 
     private fun observeDetails() {
 
-        viewModel.details.observe(viewLifecycleOwner) {
-            setQuestion(it)
-        }
-
-        viewModel.error.observe(viewLifecycleOwner) {
-            Snackbar.make(
-                binding.fragmentMain,
-                "Error: $it",
-                Snackbar.LENGTH_INDEFINITE
-            ).setAction("Retry") { observeDetails() }.show()
+        viewModel.result.observe(viewLifecycleOwner) {
+            when(it) {
+                is MainViewModel.TriviaResult.Details -> setQuestion(it.question)
+                is MainViewModel.TriviaResult.Error -> Snackbar.make(
+                    binding.fragmentMain,
+                    "$it",
+                    Snackbar.LENGTH_INDEFINITE)
+                    .setAction("Retry") { observeDetails() }.show()
+            }
         }
     }
 
-    private fun setQuestion(question: QuestionData) {
+    private fun setQuestion(question: List<TriviaQuestion>) {
         binding.textCategory.text = getString(
             R.string.category,
             question.firstOrNull()?.category ?: "-"
