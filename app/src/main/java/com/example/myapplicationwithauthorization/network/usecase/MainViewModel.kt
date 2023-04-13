@@ -1,5 +1,6 @@
 package com.example.myapplicationwithauthorization.network.usecase
 
+import android.content.SharedPreferences
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -9,27 +10,40 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class MainViewModel(private val triviaProvider: RetrofitInstance) : ViewModel() {
+const val KEY_FIRST_RETROFIT_CALL = "first_retrofit_call"
 
-    sealed class TriviaResult {
-        data class Details(val question: List<TriviaQuestion>) : TriviaResult()
-        data class Error(val message: String) : TriviaResult()
+class MainViewModel(private val triviaProvider: RetrofitInstance, private val preferences: SharedPreferences) : ViewModel() {
+
+    sealed class TriviaViewModelEvent {
+        data class TriviaResult(val question: List<TriviaQuestion>) : TriviaViewModelEvent()
+        data class TriviaError(val message: String) : TriviaViewModelEvent()
+        object LastQuestion : TriviaViewModelEvent()
     }
 
-    private var _result = MutableLiveData<TriviaResult>()
-    val result: LiveData<TriviaResult>
+    private var _result = MutableLiveData<TriviaViewModelEvent>()
+    val result: LiveData<TriviaViewModelEvent>
         get() = _result
 
+    init {
+        getPreferences(preferences)
+    }
+
+    private fun getPreferences(preferences: SharedPreferences){
+        val triviaPreferences = preferences.getBoolean(KEY_FIRST_RETROFIT_CALL, true)
+
+        if(triviaPreferences){
+            preferences.edit().putBoolean(KEY_FIRST_RETROFIT_CALL, false).apply()
+            _result.value = TriviaViewModelEvent.LastQuestion
+        }
+    }
 
     fun retrieveDetails() {
         CoroutineScope(Dispatchers.Main).launch {
             try {
-                _result.value = TriviaResult.Details(triviaProvider.getDataQuestion())
+                _result.value = TriviaViewModelEvent.TriviaResult(triviaProvider.getDataQuestion())
             } catch (e: Exception) {
-                _result.value = TriviaResult.Error("Error: ${e.localizedMessage}")
+                _result.value = TriviaViewModelEvent.TriviaError("Error: ${e.localizedMessage}")
             }
         }
     }
-
-
 }

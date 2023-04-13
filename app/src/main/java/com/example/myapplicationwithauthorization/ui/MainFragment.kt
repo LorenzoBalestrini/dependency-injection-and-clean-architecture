@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.example.myapplicationwithauthorization.MyApplication
 import com.example.myapplicationwithauthorization.R
@@ -49,12 +50,17 @@ class MainFragment : Fragment() {
 
         viewModel.result.observe(viewLifecycleOwner) {
             when(it) {
-                is MainViewModel.TriviaResult.Details -> setQuestion(it.question)
-                is MainViewModel.TriviaResult.Error -> Snackbar.make(
+                is MainViewModel.TriviaViewModelEvent.TriviaResult -> setQuestion(it.question)
+                is MainViewModel.TriviaViewModelEvent.TriviaError -> Snackbar.make(
                     binding.fragmentMain,
                     "$it",
                     Snackbar.LENGTH_INDEFINITE)
                     .setAction("Retry") { observeDetails() }.show()
+                is MainViewModel.TriviaViewModelEvent.LastQuestion -> Toast.makeText(
+                    requireContext(),
+                    "First time opening the app?",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
